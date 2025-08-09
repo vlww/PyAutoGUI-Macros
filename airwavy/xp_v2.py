@@ -234,7 +234,7 @@ list = [
     "i wrote my 20 pager on the bus",
     "deca is my roman empire",
     "i prayed to the cluster gods",
-    "i pitched a candle that screams",
+    "i pitched a candle that screams", "rizz",
     "deca is why i fear PowerPoint", "apple", "car", "house", "dog", "cat", "book", "table", "water", "sun", "tree", "school", "chair", "food", "friend", "music", "bird", "phone", "computer", "window", "door", "shirt", "shoe", "hat", "road", "city", "store", "light", "river", "mountain", "flower", "ocean", "rain", "snow", "wind", "fire", "earth", "family", "game", "movie", "story", "pen", "paper", "clock", "ball", "key", "bag", "cup", "bed", "mirror", "wall", "floor", "ceiling", "lamp", "candle", "box", "plant", "tree", "leaf", "branch", "root",
 "sky", "star", "moon", "planet", "cloud", "stone", "rock", "sand", "path", "hill",
 "train", "bus", "bike", "truck", "plane", "boat", "ship", "bridge", "tunnel", "street",
