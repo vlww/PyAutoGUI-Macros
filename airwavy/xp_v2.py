@@ -247,7 +247,7 @@ list = [
 "toy", "doll", "puzzle", "block", "crayon", "paint", "brush", "string", "rope", "chain",
 "coin", "money", "bank", "card", "ticket", "letter", "note", "envelope", "stamp", "gift",
 "box", "ring", "necklace", "bracelet", "earring", "watch", "calendar", "map", "photo", "picture",
-"art", "statue", "music", "song", "beat", "rhythm", "voice", "sound", "noise", "melody"
+"art", "statue", "music", "song", "beat", "rhythm", "voice", "sound", "noise", "melody", "rizz"
 ]
 
 
