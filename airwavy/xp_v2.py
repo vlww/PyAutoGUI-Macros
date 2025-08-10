@@ -258,11 +258,6 @@ while True:
         pyautogui.typewrite(" ")
     pyautogui.press("enter")
     time.sleep(3)
-    pyautogui.typewrite("/rank")
-    time.sleep(1)
-    pyautogui.press("enter")
-    time.sleep(1)
-    pyautogui.press("enter")
     time.sleep(54+random.random()*20)
 
     
