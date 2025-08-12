@@ -258,6 +258,6 @@ while True:
         pyautogui.typewrite(" ")
     pyautogui.press("enter")
     time.sleep(3)
-    time.sleep(54+random.random()*40)
+    time.sleep(300+random.random()*300)
 
     
