@@ -295,12 +295,12 @@ list = [
 
 
 while True:
-    for i in range(5+int(random.random()*10)):
+    for i in range(5+int(random.random()*20)):
         randomy = random.random()*len(list)
         pyautogui.typewrite(list[int(randomy)])
         pyautogui.typewrite(" ")
     pyautogui.press("enter")
     time.sleep(3)
-    time.sleep(300+random.random()*300)
+    time.sleep(60+random.random()*300)
 
     
