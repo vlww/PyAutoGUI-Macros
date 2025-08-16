@@ -302,5 +302,3 @@ while True:
     pyautogui.press("enter")
     time.sleep(3)
     time.sleep(60+random.random()*300)
-
-    
