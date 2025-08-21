@@ -6,6 +6,7 @@ time.sleep(2)
 
 list = [
     "i love go for glass",
+    "tuff",
     "i love deca",
     "deca rocks",
     "help me with my prepared event",
