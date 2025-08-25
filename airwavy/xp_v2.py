@@ -8,6 +8,7 @@ list = [
     "i love go for glass",
     "tuff",
     "a barbershop haircut that cost a quarter",
+    "badniss",
     "i love deca",
     "deca rocks",
     "help me with my prepared event",
