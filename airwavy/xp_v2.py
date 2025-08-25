@@ -9,6 +9,7 @@ list = [
     "tuff",
     "a barbershop haircut that cost a quarter",
     "badniss",
+    "globe",
     "i love deca",
     "deca rocks",
     "help me with my prepared event",
