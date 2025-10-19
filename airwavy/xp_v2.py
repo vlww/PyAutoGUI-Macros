@@ -5,11 +5,12 @@ import random
 time.sleep(2)
 
 list = [
+    "who is actually reading this",
     "i love go for glass",
     "tuff",
     "a barbershop haircut that cost a quarter",
     "badniss",
-    "mhmhmmm",
+    "mhm",
     "i love deca",
     "deca rocks",
     "help me with my prepared event",
