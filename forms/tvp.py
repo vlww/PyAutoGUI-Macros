@@ -25,3 +25,4 @@ while True:
     time.sleep(.3)
     pyautogui.press("tab")
     pyautogui.press("enter")
+    time.sleep(.3)
