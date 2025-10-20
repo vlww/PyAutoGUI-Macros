@@ -3,6 +3,7 @@ import pyautogui
 import random
 
 time.sleep(2)
+
 while True:
     pyautogui.press("tab", 3)
     pyautogui.press("down", int(random.random()*5)+1)
