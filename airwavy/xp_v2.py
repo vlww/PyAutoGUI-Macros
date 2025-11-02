@@ -19,7 +19,6 @@ list = [
     "ahhhh",
     "gambleeeeee",
     "Wow",
-    "I HATE ARYAN PATEL",
     "go for glahh",
     "I ate Dee",
     "glass me up",
