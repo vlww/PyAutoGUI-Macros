@@ -27,7 +27,7 @@ list = [
     "judge pls",
     "pitch me baby",
     "i am the ceo",
-    "marketinggggg",
+    "marketing",
     "glahhh for glass",
     "deca is my personality",
     "ready to gamble",
