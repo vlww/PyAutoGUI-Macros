@@ -33,5 +33,7 @@ while True:
     pyautogui.press("tab",2)
     pyautogui.press("enter")
     time.sleep(1)
-    pyautogui.hotkey("command", "r", interval=0.25)
+    # click 93 101
+    # pyautogui.hotkey("command", "r", interval=0.25)
+    pyautogui.click(93,101)
     time.sleep(2)
