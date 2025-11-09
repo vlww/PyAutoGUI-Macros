@@ -4,7 +4,7 @@ import random
 
 time.sleep(2)
 
-a=44
+a=5
 while True:
     pyautogui.press("tab", 3)
     pyautogui.press("enter")
