@@ -28,3 +28,6 @@ while True:
     pyautogui.press("down",4)
     pyautogui.press("tab")
     pyautogui.press("down",2)
+    time.sleep(.3)
+    pyautogui.hotkey('command', 'r') 
+    time.sleep(.3)
