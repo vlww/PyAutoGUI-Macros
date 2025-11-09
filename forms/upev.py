@@ -13,6 +13,7 @@ while True:
     if a>51:
         a=1
     pyautogui.press("enter")
+    time.sleep(1)
     pyautogui.press("tab")
     # 20 or 28
     if a==20:
@@ -24,10 +25,13 @@ while True:
         pyautogui.press("down",int(random.random()*3)+2)
     else:
         pyautogui.press("down",5)
-    pyautogui.press("tab")
+        time.sleep(.3)
+    pyautogui.press("tab",2)
     pyautogui.press("down",4)
     pyautogui.press("tab")
     pyautogui.press("down",2)
+    pyautogui.press("tab",2)
+    pyautogui.press("enter")
     time.sleep(.3)
-    pyautogui.hotkey('command', 'r') 
-    time.sleep(.3)
+    pyautogui.hotkey("command", "r", interval=0.25 )
+    time.sleep(2)
