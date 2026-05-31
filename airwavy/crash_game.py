@@ -5,7 +5,7 @@ time.sleep(2)
 print(pyautogui.position())
 """
 time.sleep(2)
-bal = 200000000000000000000000000000000000000
+bal = 20000000000000000000000000000000000000
 while True:
     pyautogui.click(600, 800)
     pyautogui.typewrite("/gamble")
@@ -23,7 +23,6 @@ while True:
     pyautogui.typewrite(f"{bal:.0f}")
     pyautogui.press("enter")
     print("\n"*50)
-    print("I LOVE GAMBLING")
     print(f"{bal:.0f}")
     bal *= 1.035
     time.sleep(.1)
