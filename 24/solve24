@@ -1,0 +1,243 @@
+(() => {
+  const TARGET = 24;
+  const CLICK_DELAY_MS = 0;
+  const SETTLE_MS = 0;
+
+  // solver
+  function solve24Full(nums) {
+    const ops = ['+', '-', '*', '/'];
+    function calc(a, op, b) {
+      if (op === '+') return a + b;
+      if (op === '-') return a - b;
+      if (op === '*') return a * b;
+      if (op === '/') return b === 0 ? null : a / b;
+    }
+    function perms(arr) {
+      if (arr.length <= 1) return [arr];
+      return arr.flatMap((v, i) =>
+        perms([...arr.slice(0,i), ...arr.slice(i+1)]).map(p => [v, ...p])
+      );
+    }
+    for (const perm of perms([0,1,2,3])) {
+      const [a,b,c,d] = perm.map(i => nums[i]);
+      for (const o1 of ops) for (const o2 of ops) for (const o3 of ops) {
+        const ab = calc(a,o1,b);
+        if (ab != null) {
+          const abc = calc(ab,o2,c);
+          if (abc != null) {
+            const abcd = calc(abc,o3,d);
+            if (abcd != null && Math.abs(abcd - TARGET) < 1e-9)
+              return { steps: [
+                { a, op: o1, b, result: ab },
+                { a: ab, op: o2, b: c, result: abc },
+                { a: abc, op: o3, b: d, result: abcd },
+              ]};
+          }
+        }
+        const bc = calc(b,o2,c);
+        if (bc != null) {
+          const abc2 = calc(a,o1,bc);
+          if (abc2 != null) {
+            const abcd2 = calc(abc2,o3,d);
+            if (abcd2 != null && Math.abs(abcd2 - TARGET) < 1e-9)
+              return { steps: [
+                { a: b, op: o2, b: c, result: bc },
+                { a, op: o1, b: bc, result: abc2 },
+                { a: abc2, op: o3, b: d, result: abcd2 },
+              ]};
+          }
+        }
+        const cd = calc(c,o3,d);
+        if (ab != null && cd != null) {
+          const abcd3 = calc(ab,o2,cd);
+          if (abcd3 != null && Math.abs(abcd3 - TARGET) < 1e-9)
+            return { steps: [
+              { a, op: o1, b, result: ab },
+              { a: c, op: o3, b: d, result: cd },
+              { a: ab, op: o2, b: cd, result: abcd3 },
+            ]};
+        }
+        if (bc != null) {
+          const bcd = calc(bc,o3,d);
+          if (bcd != null) {
+            const abcd4 = calc(a,o1,bcd);
+            if (abcd4 != null && Math.abs(abcd4 - TARGET) < 1e-9)
+              return { steps: [
+                { a: b, op: o2, b: c, result: bc },
+                { a: bc, op: o3, b: d, result: bcd },
+                { a, op: o1, b: bcd, result: abcd4 },
+              ]};
+          }
+        }
+        if (cd != null) {
+          const bcd5 = calc(b,o2,cd);
+          if (bcd5 != null) {
+            const abcd5 = calc(a,o1,bcd5);
+            if (abcd5 != null && Math.abs(abcd5 - TARGET) < 1e-9)
+              return { steps: [
+                { a: c, op: o3, b: d, result: cd },
+                { a: b, op: o2, b: cd, result: bcd5 },
+                { a, op: o1, b: bcd5, result: abcd5 },
+              ]};
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // dom herlper
+  function getCardButtons() {
+    return [...document.querySelectorAll('button.anim-deal, button.anim-pop')];
+  }
+
+  function getOpButtons() {
+    return [...document.querySelectorAll('button[aria-pressed]')];
+  }
+
+  const FONT_SIZE_RANK = ['text-6xl','text-5xl','text-4xl','text-3xl','text-2xl','text-xl','text-lg','text-base','text-sm','text-xs'];
+
+  function parseCardText(text) {
+    text = text.trim();
+    const fractionMatch = text.match(/^(-?\d+)\s*\/\s*(-?\d+)$/);
+    if (fractionMatch) {
+      const den = parseFloat(fractionMatch[2]);
+      if (den === 0) return null;
+      return parseFloat(fractionMatch[1]) / den;
+    }
+    const n = parseFloat(text);
+    return isNaN(n) ? null : n;
+  }
+
+  function cardNumber(btn) {
+    for (const cls of FONT_SIZE_RANK) {
+      const span = btn.querySelector(`span.${cls}`);
+      if (!span || span.classList.contains('absolute')) continue;
+      const n = parseCardText(span.textContent);
+      if (n !== null) return n;
+    }
+    for (const span of btn.querySelectorAll('span.font-arcade')) {
+      if (span.classList.contains('absolute')) continue;
+      const n = parseCardText(span.textContent);
+      if (n !== null) return n;
+    }
+    return null;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // all 3 mouse sync
+  function fireClick(el) {
+    el.scrollIntoView({ block: 'center' });
+    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('click',     { bubbles: true, cancelable: true }));
+  }
+
+  async function clickEl(el, label) {
+    fireClick(el);
+    console.log(` chuds: ${label}`);
+    await sleep(CLICK_DELAY_MS);
+  }
+
+  async function waitForCardValue(value, excludeEls = [], timeoutMs = 3000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const match = getCardButtons().find(btn => {
+        if (excludeEls.includes(btn)) return false;
+        const n = cardNumber(btn);
+        return n !== null && Math.abs(n - value) < 1e-6;
+      });
+      if (match) return match;
+      await sleep(16);
+    }
+    console.warn(`timed out ${value}. on screen:`, getCardButtons().map(b => cardNumber(b)));
+    return null;
+  }
+
+  // main logic
+  async function trySolve() {
+    const cardEls = getCardButtons();
+    if (cardEls.length < 4) return false;
+
+    const numbers = cardEls.slice(0, 4).map(cardNumber);
+    if (numbers.some(n => n === null)) return false;
+
+    console.log(`chuds: ${numbers}`);
+
+    const solution = solve24Full(numbers);
+    if (!solution) { console.warn(`no solution you fucking chud ${numbers}`); return true; }
+
+    const opTextMap = { '+': '+', '-': '-', '*': '×', '/': '÷' };
+    const getOpByText = sym => getOpButtons().find(el => el.textContent.trim() === opTextMap[sym]) || null;
+
+    // pre fetch op buttons
+    const opCache = {};
+    for (const sym of ['+','-','*','/']) {
+      opCache[sym] = getOpByText(sym);
+    }
+
+    let consumedEls = [];
+
+    for (let i = 0; i < solution.steps.length; i++) {
+      const step = solution.steps[i];
+      await sleep(SETTLE_MS);
+
+      const cardA = await waitForCardValue(step.a, consumedEls);
+      if (!cardA) { console.warn(`can't find A=${step.a}`); return false; }
+
+      const opEl = opCache[step.op] || getOpByText(step.op);
+      if (!opEl) { console.warn(`can't find op ${step.op}`); return false; }
+
+      const cardB = await waitForCardValue(step.b, [...consumedEls, cardA]);
+      if (!cardB) { console.warn(`can't find B=${step.b}`); return false; }
+
+      // Fire all 3 clicks back-to-back with minimal delay
+      await clickEl(cardA, `A=${step.a}`);
+      await clickEl(opEl,  `op=${step.op}`);
+      await clickEl(cardB, `B=${step.b}`);
+
+      consumedEls.push(cardA, cardB);
+      console.log(` gophers: ${step.a} ${step.op} ${step.b} = ${step.result}`);
+    }
+
+    console.log('ez pz');
+    return true;
+  }
+
+  // ── DOM WATCHER ───────────────────────────────────────────────────────────
+  let solving = false;
+  let lastCards = '';
+
+  async function onChange() {
+    if (solving) return;
+
+    const cardEls = getCardButtons();
+    if (cardEls.length < 4) return;
+
+    const numbers = cardEls.slice(0, 4).map(cardNumber);
+    if (numbers.some(n => n === null)) return;
+
+    const cardKey = numbers.join(',');
+    if (cardKey === lastCards) return;
+
+    lastCards = cardKey;
+    solving = true;
+    console.log('solve ts shit');
+    try {
+      await trySolve();
+    } finally {
+      solving = false;
+      setTimeout(() => { lastCards = ''; }, 800);
+    }
+  }
+
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  console.log('aah');
+
+  onChange();
+
+  window._stop24Solver = () => { observer.disconnect(); console.log('stop'); };
+  console.log('_stop24Solver()');
+})();
