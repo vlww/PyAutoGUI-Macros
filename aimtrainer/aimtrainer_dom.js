@@ -5,7 +5,6 @@
 
   let clickCount = 0;
   let lastSignature = null;
-  let running = true;
 
   const container = document.querySelector(CONTAINER_SELECTOR) || document.body;
 
@@ -21,33 +20,37 @@
     el.dispatchEvent(new MouseEvent('mouseup', opts));
     el.dispatchEvent(new MouseEvent('click', opts));
   }
+
   function signatureFor(el) {
-    const rect = el.getBoundingClientRect();
-    return `${Math.round(rect.left)}_${Math.round(rect.top)}_${Math.round(rect.width)}`;
+    return (el.getAttribute('style') || '') + '|' + el.className;
   }
 
-  function tick() {
-    if (!running) return;
+  function checkAndClick() {
+    if (clickCount >= MAX_CLICKS) return;
 
     const el = container.querySelector(TARGET_SELECTOR);
+    if (!el) return;
 
-    if (el) {
-      const sig = signatureFor(el);
-      if (sig !== lastSignature) {
-        simulateClick(el);
-        clickCount++;
-        lastSignature = sig;
-        console.log(`click ${clickCount}/${MAX_CLICKS}`);
-        if (clickCount >= MAX_CLICKS) {
-          running = false;
-          console.log('ez pz');
-          return;
-        }
+    const sig = signatureFor(el);
+    if (sig !== lastSignature) {
+      simulateClick(el);
+      clickCount++;
+      lastSignature = sig;
+      console.log(`click ${clickCount}/${MAX_CLICKS}`);
+      if (clickCount >= MAX_CLICKS) {
+        observer.disconnect();
+        console.log('ez pz');
       }
     }
-
-    requestAnimationFrame(tick);
   }
 
-  requestAnimationFrame(tick);
+  const observer = new MutationObserver(checkAndClick);
+  observer.observe(container, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+  });
+
+  checkAndClick();
 })();
