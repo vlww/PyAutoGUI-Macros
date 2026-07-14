@@ -47,18 +47,20 @@
   }
 
   let last = null;
-  const timer = setInterval(() => {
+
+  function handleChange() {
     const name = getPromptText();
     if (name && name !== last) {
       last = name;
       const shape = findShapeByName(name);
-      if (!shape) {
-        console.warn('No shape found for', name);
-        return;
-      }
-      setTimeout(() => clickShape(shape), 150 + Math.random() * 250);
+      if (shape) clickShape(shape);
+      else console.warn('No shape found for', name);
     }
-  }, 150);
+  }
+
+  const promptObserver = new MutationObserver(handleChange);
+  promptObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+  handleChange(); 
 
   console.log('Auto-clicker running. Call clearInterval(' + 'window.__autoClickerTimer' + ') to stop.');
   window.__autoClickerTimer = timer;
