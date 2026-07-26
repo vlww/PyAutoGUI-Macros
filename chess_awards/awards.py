@@ -23,8 +23,11 @@ while True:
     if (num<=3):
         pyautogui.click(400,520)
     else:
-        pyautogui.click(400,520)
+        pyautogui.click(400,500)
+    time.sleep(0.1)
     pyautogui.click(410,280)
+    time.sleep(0.1)
+
 
 
 # 225 470
