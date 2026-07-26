@@ -20,11 +20,10 @@ while True:
     time.sleep(0.5)
     num = random.randint(0, 7)
     pyautogui.click(positions[num][0],positions[num][1])
-    if (num<=3) {
+    if (num<=3):
         pyautogui.click(400,520)
-    } else {
+    else:
         pyautogui.click(400,520)
-    }
     pyautogui.click(410,280)
 
 
