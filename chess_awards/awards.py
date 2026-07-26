@@ -3,6 +3,8 @@ import time
 import random
 
 # edge on 732
+refresh_interval = 600 #10min
+start_time = time.time()
 
 time.sleep(2)
 positions = [
@@ -14,17 +16,24 @@ positions = [
 
 
 while True:
+    if time.time() - start_time >= refresh_interval:
+        pyautogui.click(270,100)
+        pyautogui.write("https://www.chess.com/member/bye")
+        pyautogui.press('enter')
+        time.sleep(3) 
+        start_time = time.time()
+
     pyautogui.click(720,220)
     time.sleep(0.1)
     pyautogui.click(600,365)
-    time.sleep(0.5)
+    time.sleep(0.3)
     num = random.randint(0, 7)
     pyautogui.click(positions[num][0],positions[num][1])
     if (num<=3):
         pyautogui.click(400,520)
     else:
         pyautogui.click(400,500)
-    time.sleep(0.1)
+    time.sleep(0.5)
     pyautogui.click(410,280)
     time.sleep(0.1)
 
