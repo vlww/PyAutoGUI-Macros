@@ -24,7 +24,7 @@ positions = [
 
 
 c = 0
-while c<5141:
+while c<2273:
     if time.time() - start_time >= refresh_interval:
         pyautogui.click(270,100)
         pyautogui.write("https://www.chess.com/member/bye")
