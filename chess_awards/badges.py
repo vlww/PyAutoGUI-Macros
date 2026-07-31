@@ -13,13 +13,14 @@ time.sleep(2)
 # NOT DONE YET:::
 
 positions = [
-    [185, 450], [185, 610],
-    [415, 450], [300, 610],
-    [300, 450], [415, 610],
-    [530, 450], [530, 610]
+    [280, 455], [530, 455],
+    [405, 455], [405, 600],
+    [280, 600], [530, 600],
+    [555, 455], [555, 600]
 ]
 
-
+pyautogui.click(793,229)
+time.sleep(0.1)
 
 while True:
     if time.time() - start_time >= refresh_interval:
@@ -28,17 +29,17 @@ while True:
         pyautogui.press('enter')
         time.sleep(3) 
         start_time = time.time()
+        pyautogui.click(793,229)
+        time.sleep(0.1)
 
-    pyautogui.click(90, 552) 
-    time.sleep(0.1)
-    pyautogui.click(300, 485) #600,365
+    pyautogui.click(720, 529) 
     time.sleep(0.3)
     num = random.randint(0, 7)
     pyautogui.click(positions[num][0],positions[num][1])
-    if (num<=3):
-        pyautogui.click(365, 515) #400,520
+    if (num<=2):
+        pyautogui.click(460, 495) #small
     else:
-        pyautogui.click(365, 495) #400,500
-    time.sleep(0.9)
+        pyautogui.click(460, 515) #big
+    time.sleep(0.7)
     pyautogui.click(410,280)
     time.sleep(0.1)
