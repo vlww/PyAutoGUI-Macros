@@ -16,7 +16,7 @@ positions = [
     [280, 455], [530, 455],
     [405, 455], [405, 600],
     [280, 600], [530, 600],
-    [555, 455], [555, 600]
+    [655, 455], [655, 600]
 ]
 
 pyautogui.click(793,229)
@@ -33,13 +33,13 @@ while True:
         time.sleep(0.1)
 
     pyautogui.click(720, 529) 
-    time.sleep(0.3)
+    time.sleep(0.5)
     num = random.randint(0, 7)
     pyautogui.click(positions[num][0],positions[num][1])
     if (num<=2):
         pyautogui.click(460, 495) #small
     else:
         pyautogui.click(460, 515) #big
-    time.sleep(0.7)
-    pyautogui.click(410,280)
+    time.sleep(0.9)
+    pyautogui.click(485,275)
     time.sleep(0.1)
