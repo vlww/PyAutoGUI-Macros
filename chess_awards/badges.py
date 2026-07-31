@@ -13,7 +13,7 @@ time.sleep(2)
 # NOT DONE YET:::
 
 positions = [
-    [280, 455], [530, 455],
+    [280, 455], [280, 455], [530, 455],
     [405, 455], [405, 600],
     [280, 600], [530, 600],
     [655, 455], [655, 600]
@@ -34,9 +34,9 @@ while True:
 
     pyautogui.click(720, 529) 
     time.sleep(0.5)
-    num = random.randint(0, 7)
+    num = random.randint(0, 8) #extra for weighting
     pyautogui.click(positions[num][0],positions[num][1])
-    if (num<=2):
+    if (num<=3):
         pyautogui.click(460, 495) #small
     else:
         pyautogui.click(460, 515) #big
