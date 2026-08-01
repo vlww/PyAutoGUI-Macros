@@ -3,7 +3,7 @@ import time
 import random
 
 # edge on 959
-refresh_interval = 600 #10min
+refresh_interval = 300 #5 min
 start_time = time.time()
 
 time.sleep(2)
@@ -30,16 +30,16 @@ while True:
         time.sleep(3) 
         start_time = time.time()
         pyautogui.click(793,229)
-        time.sleep(0.1)
+        time.sleep(3)
 
-    pyautogui.click(720, 529) 
-    time.sleep(0.5)
+    pyautogui.click(745, 530) 
+    time.sleep(0.9)
     num = random.randint(0, 8) #extra for weighting
     pyautogui.click(positions[num][0],positions[num][1])
     if (num<=3):
-        pyautogui.click(460, 495) #small
+        pyautogui.click(460, 497) #small
     else:
-        pyautogui.click(460, 515) #big
+        pyautogui.click(460, 518) #big
     time.sleep(1.5)
     pyautogui.click(485,275)
     time.sleep(0.1)
