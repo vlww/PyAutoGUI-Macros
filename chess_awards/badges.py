@@ -8,10 +8,6 @@ start_time = time.time()
 
 time.sleep(2)
 
-
-
-# NOT DONE YET:::
-
 positions = [
     [280, 455], [280, 455], [530, 455],
     [405, 455], [405, 600],
@@ -40,6 +36,6 @@ while True:
         pyautogui.click(460, 497) #small
     else:
         pyautogui.click(460, 518) #big
-    time.sleep(1.5)
+    time.sleep(1.4)
     pyautogui.click(485,275)
     time.sleep(0.1)
