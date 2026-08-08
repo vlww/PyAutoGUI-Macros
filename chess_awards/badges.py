@@ -36,6 +36,6 @@ while True:
         pyautogui.click(460, 497) #small
     else:
         pyautogui.click(460, 518) #big
-    time.sleep(1.4)
+    time.sleep(1.2)
     pyautogui.click(485,275)
     time.sleep(0.1)
