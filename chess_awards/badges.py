@@ -29,7 +29,7 @@ while True:
         time.sleep(3)
 
     pyautogui.click(745, 530) 
-    time.sleep(0.9)
+    time.sleep(0.8)
     num = random.randint(0, 8) #extra for weighting
     pyautogui.click(positions[num][0],positions[num][1])
     if (num<=3):
