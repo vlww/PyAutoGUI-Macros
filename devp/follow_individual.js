@@ -2,10 +2,11 @@
   const CONFIG = {
     followDelayMs: 50,     // gap between follows
     verifyWaitMs: 50,      // wait before checking a follow registered
-    afterPageClickMs: 1000,   // wait after the new page loads
+    afterPageClickMs: 500,   // wait after the new page loads
     maxFollows: 10000,        // safety cap for the whole run
     maxFailuresInARow: 3,    // stop if follows keep failing (likely rate-limited)
     pageLoadTimeoutMs: 15000,
+    loadRetries: 2,          // times to re-load a page that fails
   };
 
   let running = true, followed = 0, failures = 0, pages = 0;
@@ -114,7 +115,7 @@
           failures++;
           console.warn('⚠️ Follow did not register for', who, after.outerHTML);
           if (failures >= CONFIG.maxFailuresInARow) {
-            return finish(`${failures} follows in a row failed — probably rate-limited. Wait, then restart from this page`);
+            return finish(`${failures} follows in a row failed — probably rate-limited. Wait, then restart from this page (check the frame's page number)`);
           }
         }
         await sleep(CONFIG.followDelayMs);
@@ -123,74 +124,54 @@
     }
   }
 
-  // ---------- Pagination ----------
-  function findNext(d) {
-    const links = [...d.querySelectorAll('a[href], button')].filter(
-      (a) => !a.closest('.unavailable, .disabled, [aria-disabled="true"]') && !a.disabled
-    );
-    const rel = d.querySelector('a[rel="next"]');
-    if (rel && links.includes(rel)) return rel;
-
-    const byText = links.find((a) => ['next', 'next ›', 'next »', '›', '»', 'next page'].includes(textOf(a)) ||
-      /^next\b/.test(textOf(a)));
-    if (byText) return byText;
-
-    const cur = d.querySelector('.pagination .current, [aria-current="page"], .pagination li.active');
-    const n = cur && parseInt(textOf(cur), 10);
-    if (n) return links.find((a) => textOf(a) === String(n + 1));
-
-    const urlPage = parseInt(new URL(d.location.href).searchParams.get('page') || '1', 10);
-    return links.find((a) => textOf(a) === String(urlPage + 1));
-  }
-
-  const signature = (d) => {
-    try {
-      return d.location.href + '|' +
-        [...d.querySelectorAll('a[href*="devpost.com/"]')].slice(0, 60).map((a) => a.href).join(',');
-    } catch { return Math.random().toString(); }
+  // ---------- Pagination (by URL: ?page=N → ?page=N+1) ----------
+  const pageUrl = (n) => {
+    const u = new URL(location.href);
+    u.searchParams.set('page', n);
+    return u.toString();
   };
 
-  async function waitForChange(oldSig) {
-    const end = Date.now() + CONFIG.pageLoadTimeoutMs;
-    while (running && Date.now() < end) {
+  // Count follow-related buttons (Follow / Following / Unfollow) to detect an empty page
+  const personButtons = (d) =>
+    [...d.querySelectorAll('button, a, input[type="submit"]')]
+      .filter((b) => ['follow', 'following', 'unfollow'].includes(textOf(b))).length;
+
+  // Load a page into the frame (fresh load = refresh); retry if it doesn't load
+  async function loadPage(n) {
+    for (let attempt = 1; attempt <= CONFIG.loadRetries + 1 && running; attempt++) {
+      const loaded = waitForLoad();
+      frame.src = pageUrl(n) + (attempt > 1 ? `&_r=${Date.now()}` : '');
+      const ok = await loaded;
       const d = doc();
-      if (d && d.body && signature(d) !== oldSig) return true;
-      await sleep(250);
+      if (ok && d && d.body && d.location.href !== 'about:blank') return d;
+      status(`⚠️ Page ${n} didn't load (attempt ${attempt}) — retrying…`);
+      await sleep(2000);
     }
-    return false;
+    return null;
   }
 
   // ---------- Main loop ----------
   (async () => {
     document.body.append(bar, frame);
-    status('Loading followers list…');
-    const firstLoad = waitForLoad();
-    frame.src = location.href;
-    await firstLoad;
-
-    if (!doc() || !doc().body || doc().location.href === 'about:blank') {
-      return finish('Devpost blocked loading the page in a frame — this approach won\'t work here');
-    }
+    let page = parseInt(new URL(location.href).searchParams.get('page') || '1', 10);
 
     while (running) {
+      status(`📄 Loading page ${page}…`);
+      const loaded = await loadPage(page);
+      if (!loaded) return finish(`Page ${page} wouldn't load after retries (or Devpost blocks framing)`);
+
       const d = await waitReady();
       await sleep(CONFIG.afterPageClickMs);
       await waitForStable(d);
-      pages++;
-      const pageNum = new URL(d.location.href).searchParams.get('page') || '?';
-      status(`📄 Page ${pageNum} — following…`);
 
+      if (personButtons(d) === 0) return finish(`Page ${page} is empty — reached the end`);
+
+      pages++;
+      status(`📄 Page ${page} — following…`);
       await followAllOnPage(d);
       if (!running) break;
 
-      const next = findNext(d);
-      if (!next) return finish('No next page — reached the end');
-
-      const sig = signature(d);
-      status(`➡️ Going to next page…`);
-      realClick(next);
-      const moved = await waitForChange(sig);
-      if (!moved) return finish('Next page did not load');
+      page++;
     }
   })();
 })();
