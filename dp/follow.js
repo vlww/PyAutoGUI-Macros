@@ -1,26 +1,23 @@
 (() => {
   const CONFIG = {
-    maxFollows: 3000,     // hard cap per run
-    minDelayMs: 5,   // random delay between follows
-    maxDelayMs: 10,
-    autoScroll: true,  // all participants already load on this page
+    maxFollows: 10000,     // hard cap per run
+    minDelayMs: 20,    // random delay between follows
+    maxDelayMs: 50,
+    autoScroll: true,   // scroll to load more participants
+    idleStopMs: 20000,  // stop if no clickable buttons appear for this long
   };
 
   const SELECTOR = 'button.follow-btn';
-  const queue = [];
-  const seen = new WeakSet();
+  const clickedIds = new Set();      // people already clicked (by profile URL)
+  const clickedBtns = new WeakSet(); // fallback when a card has no link
   let followed = 0;
-  let skipped = 0;
   let running = true;
-  let busy = false;
+  let lastActivity = Date.now();
+  let lastDiag = 0;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const randDelay = () =>
     CONFIG.minDelayMs + Math.random() * (CONFIG.maxDelayMs - CONFIG.minDelayMs);
-
-  // Snapshot of the button's state, used to detect whether a click worked
-  const stateOf = (btn) =>
-    `${btn.className}|${btn.getAttribute('title') || ''}|${btn.getAttribute('data-original-title') || ''}|${btn.innerHTML}`;
 
   const isUnfollowed = (btn) => {
     const title = btn.getAttribute('title') || btn.getAttribute('data-original-title') || '';
@@ -31,13 +28,28 @@
       !btn.disabled;
   };
 
-  const nameFor = (btn) => {
-    let el = btn;
-    for (let i = 0; i < 8 && el; i++, el = el.parentElement) {
-      const link = el.querySelector && el.querySelector('a[href*="devpost.com/"]');
-      if (link && link.innerText.trim()) return link.innerText.trim();
+  // The person's card = the largest ancestor that still contains only this one follow button
+  const cardFor = (btn) => {
+    let card = btn;
+    while (card.parentElement && card.parentElement.querySelectorAll(SELECTOR).length === 1) {
+      card = card.parentElement;
     }
-    return '(unknown)';
+    return card;
+  };
+
+  const idFor = (btn) => {
+    const link = cardFor(btn).querySelector('a[href*="devpost.com/"]');
+    return link ? link.href : null;
+  };
+
+  const labelFor = (btn) => {
+    const link = cardFor(btn).querySelector('a[href*="devpost.com/"]');
+    return (link && link.innerText.trim()) || (link && link.href) || '(no profile link)';
+  };
+
+  const alreadyClicked = (btn) => {
+    const id = idFor(btn);
+    return clickedBtns.has(btn) || (id && clickedIds.has(id));
   };
 
   // Full mouse sequence — some handlers ignore a bare .click()
@@ -50,61 +62,24 @@
     el.dispatchEvent(new MouseEvent('click', opts));
   }
 
-  function scan(root = document) {
-    let added = 0;
-    root.querySelectorAll(SELECTOR).forEach((btn) => {
-      if (!seen.has(btn) && isUnfollowed(btn)) {
-        seen.add(btn);
-        queue.push(btn);
-        added++;
-      }
-    });
-    if (added) console.log(`➕ Queued ${added} (queue: ${queue.length})`);
-    processQueue();
+  // Always read the live page, so re-rendered buttons are never stale
+  const nextButton = () =>
+    [...document.querySelectorAll(SELECTOR)].find((btn) => isUnfollowed(btn) && !alreadyClicked(btn));
+
+  // Explains why nothing is clickable (printed at most every 5s while waiting)
+  function diagnose() {
+    if (Date.now() - lastDiag < 5000) return;
+    lastDiag = Date.now();
+    const all = [...document.querySelectorAll(SELECTOR)];
+    const followedLooking = all.filter((b) => !isUnfollowed(b) && !b.disabled).length;
+    const disabled = all.filter((b) => b.disabled).length;
+    const clickedAlready = all.filter((b) => isUnfollowed(b) && alreadyClicked(b)).length;
+    console.log(`🔎 Waiting — ${all.length} buttons on page: ${followedLooking} look already followed, ${disabled} disabled, ${clickedAlready} already clicked this run.`);
   }
 
-  async function processQueue() {
-    if (busy) return;
-    busy = true;
-    while (running && queue.length && followed < CONFIG.maxFollows) {
-      const btn = queue.shift();
-      if (!document.contains(btn) || !isUnfollowed(btn)) continue;
-
-      btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await sleep(100);
-
-      const before = stateOf(btn);
-      const who = nameFor(btn);
-      realClick(btn);
-      await sleep(100);
-
-      // The button may be replaced after following, so check both
-      const changed = !document.contains(btn) || stateOf(btn) !== before;
-      if (changed) {
-        followed++;
-        console.log(`✅ Followed #${followed}: ${who}`);
-      } else {
-        skipped++;
-        console.warn(`⚠️ No change for ${who}, skipping (${skipped} skipped so far)`);
-      }
-      await sleep(randDelay());
-    }
-    busy = false;
-    if (followed >= CONFIG.maxFollows) return finish('Reached maxFollows cap.');
-    if (running && !queue.length) {
-      if (CONFIG.autoScroll) window.scrollTo(0, document.body.scrollHeight);
-      else finish('No more unfollowed buttons on the page.');
-    }
-  }
-
-  // DOM watcher: picks up follow buttons if more participants load
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      for (const n of m.addedNodes) {
-        if (n.nodeType === 1) { scan(n.parentElement || n); return; }
-      }
-    }
-  });
+  // DOM watcher: any page change counts as activity
+  const observer = new MutationObserver(() => { lastActivity = Date.now(); });
+  observer.observe(document.body, { childList: true, subtree: true });
 
   function finish(msg) {
     if (!running) return;
@@ -112,11 +87,29 @@
     observer.disconnect();
     console.log(`🛑 ${msg} Total followed: ${followed}`);
   }
-
   window.stopAutoFollow = () => finish('Stopped manually.');
 
-  const all = document.querySelectorAll(SELECTOR);
-  console.log(`👀 Found ${all.length} follow buttons, ${[...all].filter(isUnfollowed).length} not yet followed. Call stopAutoFollow() to stop.`);
-  observer.observe(document.body, { childList: true, subtree: true });
-  scan();
+  (async () => {
+    console.log('👀 Running. Call stopAutoFollow() to stop.');
+    while (running && followed < CONFIG.maxFollows) {
+      const btn = nextButton();
+      if (btn) {
+        const id = idFor(btn);
+        if (id) clickedIds.add(id);
+        clickedBtns.add(btn);
+        btn.scrollIntoView({ block: 'center' });
+        realClick(btn);
+        followed++;
+        lastActivity = Date.now();
+        console.log(`✅ Followed #${followed}: ${labelFor(btn)}`);
+        await sleep(randDelay());
+      } else {
+        diagnose();
+        if (Date.now() - lastActivity > CONFIG.idleStopMs) return finish('No more follow buttons.');
+        if (CONFIG.autoScroll) window.scrollTo(0, document.body.scrollHeight);
+        await sleep(500);
+      }
+    }
+    if (followed >= CONFIG.maxFollows) finish('Reached maxFollows cap.');
+  })();
 })();
