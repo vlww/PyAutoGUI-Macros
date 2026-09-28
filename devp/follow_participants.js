@@ -1,7 +1,7 @@
 (() => {
   const CONFIG = {
-    followDelayMs: 10,     // gap between follows
-    verifyWaitMs: 20,      // wait before checking a follow registered
+    followDelayMs: 40,     // gap between follows
+    verifyWaitMs: 80,      // wait before checking a follow registered
     maxFollows: 100000,        // safety cap for the run
     maxFailuresInARow: 3,    // stop if follows keep failing (likely rate-limited)
   };
