@@ -50,36 +50,79 @@
   }
 
   let saveChain = Promise.resolve();
+  let saveBlocked = false; // true when Chrome withdrew permission and a click is needed
+
+  // Merge in what other tabs saved, then write. Retries if another tab is mid-write.
+  async function writeToFile() {
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      try {
+        const before = listCount();
+        const current = (await (await fileHandle.getFile()).text()).trim();
+        if (current) {
+          try { mergeIn(JSON.parse(current)); }
+          catch { /* file caught mid-write by another tab — retry */ throw Object.assign(new Error('partial file'), { name: 'RetryError' }); }
+        }
+        const fromOthers = listCount() - before;
+        if (fromOthers > 0) console.log(`Merged ${fromOthers} people saved by another tab.`);
+
+        list.updated = new Date().toISOString();
+        const w = await fileHandle.createWritable();
+        await w.write(JSON.stringify(list, null, 2));
+        await w.close();
+        saveBlocked = false;
+        return true;
+      } catch (e) {
+        if (e.name === 'NotAllowedError' || e.name === 'SecurityError') {
+          saveBlocked = true;
+          console.warn('Chrome withdrew permission to save into the list file.');
+          return false;
+        }
+        // Busy (another tab writing) or a transient error — wait and retry
+        console.warn(`Save attempt ${attempt} failed (${e.name}) — retrying…`);
+        await sleep(300 * attempt + Math.random() * 300);
+      }
+    }
+    return false;
+  }
+
   function saveList({ final = false } = {}) {
     unsaved = 0;
     saveChain = saveChain.then(async () => {
+      backupLocally(); // always keep a copy on this site first
       if (fileHandle) {
-        try {
-          // Pull in anything other tabs saved since we last looked, THEN write.
-          // This way parallel tabs add to the list instead of overwriting each other,
-          // and this tab learns who the other tabs already followed.
-          const before = listCount();
-          const current = (await (await fileHandle.getFile()).text()).trim();
-          if (current) mergeIn(JSON.parse(current));
-          const fromOthers = listCount() - before;
-          if (fromOthers > 0) console.log(`Merged ${fromOthers} people saved by another tab.`);
-
-          list.updated = new Date().toISOString();
-          backupLocally();
-          const w = await fileHandle.createWritable();
-          await w.write(JSON.stringify(list, null, 2));
-          await w.close();
-          return;
-        } catch (e) {
-          console.warn('Could not write to the list file, falling back to download:', e);
-          fileHandle = null;
-        }
+        const ok = await writeToFile();
+        backupLocally();
+        if (!ok) showAllowSaving();
+        return;      // never fall back to a download while we have the file
       }
+      // Only browsers without the file API (not Chrome) get a download, once at the end
       list.updated = new Date().toISOString();
-      backupLocally();
-      if (final) downloadList(JSON.stringify(list, null, 2)); // without the file API, only download once at the end
+      if (final) downloadList(JSON.stringify(list, null, 2));
     });
     return saveChain;
+  }
+
+  // If permission was withdrawn, offer a one-click fix (Chrome requires a click to re-allow)
+  function showAllowSaving() {
+    if (!saveBlocked || buttons.querySelector('[data-allow-save]')) return;
+    status(`⚠️ Chrome needs permission to save into ${fileHandle.name}. Click "Allow saving" — nothing is lost meanwhile.`);
+    const b = document.createElement('button');
+    b.dataset.allowSave = '1';
+    b.textContent = '🔓 Allow saving';
+    b.style.cssText = 'background:#FFD54F;color:#000;border:0;padding:4px 12px;border-radius:4px;cursor:pointer;';
+    b.onclick = async () => {
+      try {
+        if ((await fileHandle.requestPermission({ mode: 'readwrite' })) === 'granted') {
+          b.remove();
+          saveBlocked = false;
+          await saveList();
+          status(`💾 Saved to ${fileHandle.name} — ${listCount()} people in your list.`);
+        }
+      } catch (e) {
+        console.warn('Permission request failed:', e);
+      }
+    };
+    buttons.prepend(b);
   }
   function downloadList(json) {
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
@@ -318,10 +361,13 @@
     running = false;
     observer.disconnect();
     await saveList({ final: true });
-    const where = fileHandle ? `saved to ${fileHandle.name}` : 'downloaded as a new file — use that file next time';
+    const where = !fileHandle ? 'downloaded as a new file — use that file next time'
+      : saveBlocked ? `NOT yet saved to ${fileHandle.name} — click "Allow saving"`
+      : `saved to ${fileHandle.name}`;
     status(`🛑 ${msg} — Followed ${followed}. List: ${listCount()} people, ${where}. ` +
       `Skipped: ${skippedInList} already in list, ${skippedFollowers} with followers, ${skippedPrivate} private, ${skippedUnknown} unreadable.`);
     setButtons([['Close', () => bar.remove()]]);
+    if (saveBlocked) showAllowSaving();
   }
   window.stopAutoFollow = () => finish('Stopped manually');
 
