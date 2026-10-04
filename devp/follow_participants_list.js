@@ -51,15 +51,23 @@
 
   let saveChain = Promise.resolve();
   function saveList({ final = false } = {}) {
-    list.updated = new Date().toISOString();
-    backupLocally();
     unsaved = 0;
-    const json = JSON.stringify(list, null, 2);
     saveChain = saveChain.then(async () => {
       if (fileHandle) {
         try {
+          // Pull in anything other tabs saved since we last looked, THEN write.
+          // This way parallel tabs add to the list instead of overwriting each other,
+          // and this tab learns who the other tabs already followed.
+          const before = listCount();
+          const current = (await (await fileHandle.getFile()).text()).trim();
+          if (current) mergeIn(JSON.parse(current));
+          const fromOthers = listCount() - before;
+          if (fromOthers > 0) console.log(`Merged ${fromOthers} people saved by another tab.`);
+
+          list.updated = new Date().toISOString();
+          backupLocally();
           const w = await fileHandle.createWritable();
-          await w.write(json);
+          await w.write(JSON.stringify(list, null, 2));
           await w.close();
           return;
         } catch (e) {
@@ -67,7 +75,9 @@
           fileHandle = null;
         }
       }
-      if (final) downloadList(json); // without the file API, only download once at the end
+      list.updated = new Date().toISOString();
+      backupLocally();
+      if (final) downloadList(JSON.stringify(list, null, 2)); // without the file API, only download once at the end
     });
     return saveChain;
   }
@@ -103,15 +113,45 @@
   // ---------- Opening / creating the list file ----------
   const pickerTypes = [{ description: 'Follow list', accept: { 'application/json': ['.json'] } }];
 
+  // Remember the chosen file (per hackathon site) so it can be reused automatically
+  const idb = () => new Promise((res, rej) => {
+    const r = indexedDB.open('devpostFollowList', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  const idbGet = async (k) => {
+    const db = await idb();
+    return new Promise((res, rej) => {
+      const q = db.transaction('kv').objectStore('kv').get(k);
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    });
+  };
+  const idbSet = async (k, v) => {
+    const db = await idb();
+    return new Promise((res, rej) => {
+      const t = db.transaction('kv', 'readwrite');
+      t.objectStore('kv').put(v, k);
+      t.oncomplete = () => res(); t.onerror = () => rej(t.error);
+    });
+  };
+
+  async function useHandle(h) {
+    const text = await (await h.getFile()).text();
+    if (text.trim()) mergeIn(JSON.parse(text));
+    fileHandle = h;
+    try { await idbSet('handle', h); } catch {}
+    start();
+  }
+
   async function openList() {
     try {
       if (hasFsApi) {
-        const [h] = await window.showOpenFilePicker({ types: pickerTypes });
+        const [h] = await window.showOpenFilePicker({ types: pickerTypes, startIn: 'documents' });
         if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') {
-          return status('⚠️ Permission to save into the file was denied. Try again and click "Allow".');
+          return status('⚠️ Permission to save into the file was denied. Try again and choose "Allow on every visit".');
         }
-        mergeIn(JSON.parse(await (await h.getFile()).text()));
-        fileHandle = h;
+        await useHandle(h);
       } else {
         const file = await new Promise((resolve) => {
           const input = document.createElement('input');
@@ -122,8 +162,8 @@
         });
         if (!file) return;
         mergeIn(JSON.parse(await file.text()));
+        start();
       }
-      start();
     } catch (e) {
       if (e.name !== 'AbortError') status(`⚠️ Couldn't read that file: ${e.message}`);
     }
@@ -132,8 +172,12 @@
   async function createList() {
     try {
       if (hasFsApi) {
-        fileHandle = await window.showSaveFilePicker({ suggestedName: 'devpost-followed-list.json', types: pickerTypes });
+        fileHandle = await window.showSaveFilePicker({ suggestedName: 'followed.json', startIn: 'documents', types: pickerTypes });
+        if ((await fileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+          return status('⚠️ Permission to save into the file was denied.');
+        }
         await saveList();
+        try { await idbSet('handle', fileHandle); } catch {}
       }
       start();
     } catch (e) {
@@ -302,10 +346,47 @@
     followAll();
   }
 
-  status('Choose your follow list to begin:');
-  setButtons([
-    ['📂 Open my list', openList],
-    ['➕ Create new list', createList],
-    ['Cancel', () => bar.remove()],
-  ]);
+  function askForFile(msg = 'Choose Documents/followed.json to begin:') {
+    status(msg);
+    setButtons([
+      ['📂 Open followed.json', openList],
+      ['➕ Create followed.json', createList],
+      ['Cancel', () => bar.remove()],
+    ]);
+  }
+
+  // Use the remembered file automatically when Chrome still allows it
+  (async () => {
+    if (!hasFsApi) return askForFile('This browser can\'t remember files — choose your list file:');
+    let saved = null;
+    try { saved = await idbGet('handle'); } catch {}
+    if (!saved) return askForFile();
+
+    let perm = 'prompt';
+    try { perm = await saved.queryPermission({ mode: 'readwrite' }); } catch {}
+
+    if (perm === 'granted') {
+      try {
+        status(`📂 Using ${saved.name}…`);
+        return await useHandle(saved);
+      } catch (e) {
+        return askForFile(`⚠️ Couldn't open ${saved.name} (moved or deleted?) — choose it again:`);
+      }
+    }
+
+    // Chrome needs one click to re-allow access (skipped if "Allow on every visit" was chosen)
+    status(`📂 Remembered ${saved.name} — click Start to allow access (choose "Allow on every visit" to skip this next time).`);
+    setButtons([
+      ['▶ Start', async () => {
+        try {
+          if ((await saved.requestPermission({ mode: 'readwrite' })) === 'granted') await useHandle(saved);
+          else askForFile('⚠️ Access not allowed — choose the file again:');
+        } catch (e) {
+          askForFile(`⚠️ Couldn't open ${saved.name} — choose it again:`);
+        }
+      }],
+      ['📂 Different file', openList],
+      ['Cancel', () => bar.remove()],
+    ]);
+  })();
 })();
