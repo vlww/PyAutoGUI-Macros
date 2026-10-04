@@ -3,7 +3,7 @@
     unfollowDelayMs: 50,     // gap between unfollows
     verifyWaitMs: 50,        // wait before checking an unfollow registered
     afterPageLoadMs: 500,    // wait after the page loads
-    maxUnfollows: 10000,     // safety cap for the whole run
+    maxUnfollows: 100000,     // safety cap for the whole run
     maxFailuresInARow: 3,    // stop if unfollows keep failing (likely rate-limited)
     pageLoadTimeoutMs: 15000,
     loadRetries: 2,          // times to re-load a page that fails
