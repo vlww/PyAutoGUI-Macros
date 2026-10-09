@@ -8,7 +8,7 @@
     pageLoadTimeoutMs: 15000,
     loadRetries: 2,          // times to re-load a page that fails
     restartWaitMs: 180000,   // when nothing is left (or it's rate-limited): wait 3 min, then start over
-    lowPageThreshold: 10,     // a page with fewer Unfollow buttons than this counts as "low"
+    lowPageThreshold: 20,     // a page with fewer Unfollow buttons than this counts as "low"
     lowPagesToRestart: 2,    // this many low pages in a row → start the countdown
   };
  
